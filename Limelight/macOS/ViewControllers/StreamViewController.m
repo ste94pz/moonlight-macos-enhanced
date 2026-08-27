@@ -200,6 +200,14 @@ highFreqMotor:(unsigned short)highFreqMotor {
     }];
 }
 
+- (void)setMotionEventState:(uint16_t)controllerNumber
+                 motionType:(uint8_t)motionType
+               reportRateHz:(uint16_t)reportRateHz {
+    [self forwardIfCurrentNamed:@"setMotionEventState" block:^(id<MLStreamScopedCallbackOwner> owner) {
+        [owner setMotionEventState:controllerNumber motionType:motionType reportRateHz:reportRateHz];
+    }];
+}
+
 - (void)clipboardItemReceived:(const LI_CLIPBOARD_ITEM *)item {
     [self forwardIfCurrentNamed:@"clipboardItemReceived" block:^(id<MLStreamScopedCallbackOwner> owner) {
         if ([owner respondsToSelector:@selector(clipboardItemReceived:)]) {
@@ -1667,6 +1675,20 @@ highFreqMotor:(unsigned short)highFreqMotor {
                 [self.hidSupport rumbleLowFreqMotor:lowFreqMotor highFreqMotor:highFreqMotor];
             }
         }
+    }
+}
+
+- (void)setMotionEventState:(uint16_t)controllerNumber
+                 motionType:(uint8_t)motionType
+               reportRateHz:(uint16_t)reportRateHz {
+    if (self.controllerSupport != nil) {
+        [self.controllerSupport setMotionEventState:controllerNumber
+                                         motionType:motionType
+                                       reportRateHz:reportRateHz];
+    } else {
+        [self.hidSupport setMotionEventState:controllerNumber
+                                  motionType:motionType
+                                reportRateHz:reportRateHz];
     }
 }
 

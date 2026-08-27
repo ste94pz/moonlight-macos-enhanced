@@ -2221,6 +2221,15 @@ void ClRumble(unsigned short controllerNumber, unsigned short lowFreqMotor, unsi
     }
 }
 
+void ClSetMotionEventState(uint16_t controllerNumber, uint8_t motionType, uint16_t reportRateHz)
+{
+    Connection *conn = CurrentConnection();
+    id<ConnectionCallbacks> callbacks = ConnectionGetCallbacksSnapshot(conn);
+    if (callbacks) {
+        [callbacks setMotionEventState:controllerNumber motionType:motionType reportRateHz:reportRateHz];
+    }
+}
+
 void ClConnectionStatusUpdate(int status)
 {
     Connection *conn = CurrentConnection();
@@ -2630,6 +2639,7 @@ void ClClipboardItemReceived(const LI_CLIPBOARD_ITEM *item)
     _clCallbacks.connectionTerminated = ClConnectionTerminated;
     _clCallbacks.logMessage = ClLogMessage;
     _clCallbacks.rumble = ClRumble;
+    _clCallbacks.setMotionEventState = ClSetMotionEventState;
     _clCallbacks.connectionStatusUpdate = ClConnectionStatusUpdate;
     _clCallbacks.clipboardItemReceived = ClClipboardItemReceived;
 

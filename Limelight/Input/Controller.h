@@ -11,6 +11,11 @@
 @import GameController;
 @import CoreHaptics;
 
+typedef struct {
+    float lastX;
+    float lastY;
+} controller_touch_context_t;
+
 @interface Controller : NSObject
 
 @property(nullable, nonatomic, retain) GCController *gamepad;
@@ -27,6 +32,15 @@
 
 @property(nonatomic) HapticContext *_Nullable lowFreqMotor;
 @property(nonatomic) HapticContext *_Nullable highFreqMotor;
+
+// Extended controller state advertised to Sunshine.
+@property(nonatomic) BOOL reportedArrival;
+@property(nonatomic, strong, nullable) NSTimer *gyroTimer;
+@property(nonatomic, strong, nullable) NSTimer *accelTimer;
+@property(nonatomic) GCRotationRate lastGyroSample;
+@property(nonatomic) GCAcceleration lastAccelSample;
+@property(nonatomic) controller_touch_context_t primaryTouch;
+@property(nonatomic) controller_touch_context_t secondaryTouch;
 
 // Gamepad Mouse Emulation State
 @property(nonatomic) BOOL isMouseMode;
