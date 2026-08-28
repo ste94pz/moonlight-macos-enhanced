@@ -20,6 +20,13 @@
 @import AudioToolbox;
 @import CoreHaptics;
 
+// Exact zero gyro samples are reliable protocol packets. Use hysteresis and a
+// settling period so sensor noise cannot repeatedly enqueue reliable zeros on
+// a slow connection.
+static const double kControllerGyroRestEnterDps = 1.0;
+static const double kControllerGyroRestExitDps = 1.5;
+static const NSUInteger kControllerGyroRestSamples = 8;
+
 static inline PML_INPUT_STREAM_CONTEXT ControllerInputContext(ControllerSupport *support) {
     PML_INPUT_STREAM_CONTEXT ctx = (PML_INPUT_STREAM_CONTEXT)support.inputContext;
     if (ctx != NULL && ctx->connectionContext != NULL) {
@@ -224,6 +231,31 @@ static const double MOUSE_SPEED_DIVISOR = 2.5;
 
 -(void)setShouldSendInputEvents:(BOOL)shouldSendInputEvents
 {
+    if (_shouldSendInputEvents == shouldSendInputEvents) {
+        return;
+    }
+
+    if (_shouldSendInputEvents && !shouldSendInputEvents) {
+        PML_INPUT_STREAM_CONTEXT inputCtx = ControllerInputContext(self);
+        if (inputCtx) {
+            [_controllerStreamLock lock];
+            for (Controller *controller in _controllers.allValues) {
+                if (_multiController) {
+                    LiSendMultiControllerEventCtx(inputCtx, controller.playerIndex,
+                                                  [self activeGamepadMask],
+                                                  0, 0, 0, 0, 0, 0, 0);
+                } else {
+                    LiSendControllerEventCtx(inputCtx, 0, 0, 0, 0, 0, 0, 0);
+                }
+                if (controller.gyroTimer != nil) {
+                    LiSendControllerMotionEventCtx(inputCtx, controller.playerIndex,
+                                                   LI_MOTION_TYPE_GYRO, 0.0f, 0.0f, 0.0f);
+                }
+            }
+            [_controllerStreamLock unlock];
+        }
+    }
+
     _shouldSendInputEvents = shouldSendInputEvents;
     if (!shouldSendInputEvents) {
         return;
@@ -313,12 +345,13 @@ static const double MOUSE_SPEED_DIVISOR = 2.5;
 -(void) updateButtonFlags:(Controller*)controller flags:(int)flags
 {
     @synchronized(controller) {
+        int previousFlags = controller.lastButtonFlags;
         controller.lastButtonFlags = flags;
         
         // This must be called before handleSpecialCombosPressed
         // because we clear the original button flags there
-        int releasedButtons = (controller.lastButtonFlags ^ flags) & ~flags;
-        int pressedButtons = (controller.lastButtonFlags ^ flags) & flags;
+        int releasedButtons = (previousFlags ^ flags) & ~flags;
+        int pressedButtons = (previousFlags ^ flags) & flags;
         
         [self handleSpecialCombosReleased:controller releasedButtons:releasedButtons];
         
@@ -329,16 +362,22 @@ static const double MOUSE_SPEED_DIVISOR = 2.5;
 -(void) setButtonFlag:(Controller*)controller flags:(int)flags
 {
     @synchronized(controller) {
+        int pressedButtons = flags & ~controller.lastButtonFlags;
         controller.lastButtonFlags |= flags;
-        [self handleSpecialCombosPressed:controller pressedButtons:flags];
+        if (pressedButtons != 0) {
+            [self handleSpecialCombosPressed:controller pressedButtons:pressedButtons];
+        }
     }
 }
 
 -(void) clearButtonFlag:(Controller*)controller flags:(int)flags
 {
     @synchronized(controller) {
+        int releasedButtons = flags & controller.lastButtonFlags;
         controller.lastButtonFlags &= ~flags;
-        [self handleSpecialCombosReleased:controller releasedButtons:flags];
+        if (releasedButtons != 0) {
+            [self handleSpecialCombosReleased:controller releasedButtons:releasedButtons];
+        }
     }
 }
 
@@ -382,7 +421,7 @@ static const double MOUSE_SPEED_DIVISOR = 2.5;
         if (_multiController) {
             LiSendMultiControllerEventCtx(inputCtx,
                                           controller.playerIndex,
-                                          [ControllerSupport getConnectedGamepadMask:nil],
+                                          [self activeGamepadMask],
                                           controller.lastButtonFlags,
                                           controller.lastLeftTrigger,
                                           controller.lastRightTrigger,
@@ -467,12 +506,15 @@ static const double MOUSE_SPEED_DIVISOR = 2.5;
 
 -(BOOL) reportControllerArrival:(Controller*)limeController
 {
+    if (!self.shouldSendInputEvents) {
+        return NO;
+    }
     if (limeController.reportedArrival) {
         return YES;
     }
 
     PML_INPUT_STREAM_CONTEXT inputCtx = ControllerInputContext(self);
-    if (!inputCtx || !self.shouldSendInputEvents) {
+    if (!inputCtx) {
         return NO;
     }
 
@@ -594,23 +636,56 @@ static const double MOUSE_SPEED_DIVISOR = 2.5;
                 }];
             }
         } else if (motionType == LI_MOTION_TYPE_GYRO) {
+            BOOL wasReporting = controller.gyroTimer != nil;
             [controller.gyroTimer invalidate];
             controller.gyroTimer = nil;
             controller.lastGyroSample = (GCRotationRate){};
+            controller.gyroAtRest = YES;
+            controller.gyroStationarySampleCount = 0;
             if (reportRateHz > 0 && controller.gamepad.motion.hasRotationRate) {
                 controller.gyroTimer = [NSTimer scheduledTimerWithTimeInterval:interval repeats:YES block:^(NSTimer *timer) {
                     GCRotationRate sample = controller.gamepad.motion.rotationRate;
+                    GCRotationRate filteredSample = {
+                        sample.x * 57.2957795,
+                        sample.z * 57.2957795,
+                        sample.y * -57.2957795,
+                    };
+                    double magnitude = sqrt(filteredSample.x * filteredSample.x +
+                                            filteredSample.y * filteredSample.y +
+                                            filteredSample.z * filteredSample.z);
+                    if (controller.gyroAtRest) {
+                        if (magnitude <= kControllerGyroRestExitDps) {
+                            filteredSample = (GCRotationRate){};
+                        } else {
+                            controller.gyroAtRest = NO;
+                        }
+                    } else if (magnitude <= kControllerGyroRestEnterDps) {
+                        controller.gyroStationarySampleCount += 1;
+                        if (controller.gyroStationarySampleCount >= kControllerGyroRestSamples) {
+                            controller.gyroAtRest = YES;
+                            controller.gyroStationarySampleCount = 0;
+                            filteredSample = (GCRotationRate){};
+                        }
+                    } else {
+                        controller.gyroStationarySampleCount = 0;
+                    }
                     GCRotationRate previousSample = controller.lastGyroSample;
-                    if (memcmp(&sample, &previousSample, sizeof(sample)) == 0) return;
-                    controller.lastGyroSample = sample;
+                    if (memcmp(&filteredSample, &previousSample, sizeof(filteredSample)) == 0) return;
+                    controller.lastGyroSample = filteredSample;
                     PML_INPUT_STREAM_CONTEXT inputCtx = ControllerInputContext(self);
                     if (inputCtx && [self reportControllerArrival:controller]) {
                         LiSendControllerMotionEventCtx(inputCtx, controller.playerIndex, LI_MOTION_TYPE_GYRO,
-                                                       sample.x * 57.2957795f,
-                                                       sample.z * 57.2957795f,
-                                                       sample.y * -57.2957795f);
+                                                       (float)filteredSample.x,
+                                                       (float)filteredSample.y,
+                                                       (float)filteredSample.z);
                     }
                 }];
+            } else if (wasReporting) {
+                PML_INPUT_STREAM_CONTEXT inputCtx = ControllerInputContext(self);
+                if (inputCtx && [self reportControllerArrival:controller]) {
+                    LiSendControllerMotionEventCtx(inputCtx, controller.playerIndex,
+                                                   LI_MOTION_TYPE_GYRO, 0.0f, 0.0f, 0.0f);
+                }
             }
         }
 
@@ -1120,11 +1195,20 @@ static const double MOUSE_SPEED_DIVISOR = 2.5;
         // Stop haptics on this controller
         [self cleanupControllerHaptics:limeController];
         [self cleanupControllerMotion:limeController];
-        
-        limeController.gamepad = nil;
+
+        // Single-controller mode deliberately keeps a virtual controller
+        // present, so explicitly release its complete state on disconnect.
+        limeController.lastButtonFlags = 0;
+        limeController.lastLeftTrigger = 0;
+        limeController.lastRightTrigger = 0;
+        limeController.lastLeftStickX = 0;
+        limeController.lastLeftStickY = 0;
+        limeController.lastRightStickX = 0;
+        limeController.lastRightStickY = 0;
         
         // Inform the server of the updated active gamepads before removing this controller
         [self updateFinished:limeController];
+        limeController.gamepad = nil;
         [self->_controllers removeObjectForKey:[NSNumber numberWithInteger:controller.playerIndex]];
 
         // Re-evaluate the on-screen control mode
