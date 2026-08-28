@@ -4,6 +4,7 @@ Build
 DerivedData
 build/
 build-*/
+dist/
 .spm-cache/
 tmp/
 Limelight/Version.xcconfig
