@@ -10,6 +10,7 @@ import SwiftUI
 enum AppLanguage: String, CaseIterable, Identifiable {
   case system = "System"
   case english = "English"
+  case italian = "Italiano"
   case chinese = "简体中文"
 
   var id: String { rawValue }
@@ -37,6 +38,8 @@ public class LanguageManager: NSObject, ObservableObject {
       UserDefaults.standard.removeObject(forKey: "AppleLanguages")
     case .english:
       UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
+    case .italian:
+      UserDefaults.standard.set(["it"], forKey: "AppleLanguages")
     case .chinese:
       UserDefaults.standard.set(["zh-Hans"], forKey: "AppleLanguages")
     }
@@ -58,22 +61,37 @@ public class LanguageManager: NSObject, ObservableObject {
   }
 
   public func localize(_ key: String) -> String {
-    let useChinese: Bool
-
-    if currentLanguage == .system {
-      // Check system preference
+    let languageCode: String
+    switch currentLanguage {
+    case .system:
       let preferred = Locale.preferredLanguages.first ?? "en"
-      useChinese = preferred.hasPrefix("zh")
-    } else {
-      useChinese = currentLanguage == .chinese
+      if preferred.hasPrefix("zh") {
+        languageCode = "zh-Hans"
+      } else if preferred.hasPrefix("it") {
+        languageCode = "it"
+      } else {
+        languageCode = "en"
+      }
+    case .english:
+      languageCode = "en"
+    case .italian:
+      languageCode = "it"
+    case .chinese:
+      languageCode = "zh-Hans"
     }
 
-    if useChinese {
+    if languageCode == "zh-Hans" {
       if let val = zhHans[key] { return val }
       if let val = localizedString(key, languageCode: "zh-Hans") { return val }
-      return key
+    } else if languageCode == "it" {
+      if let val = localizedString(key, languageCode: "it") { return val }
+    } else {
+      if let val = en[key] { return val }
+      if let val = localizedString(key, languageCode: "en") { return val }
     }
 
+    // English is the development language and the safe fallback for incomplete
+    // third-party or newly-added localization keys.
     if let val = en[key] { return val }
     if let val = localizedString(key, languageCode: "en") { return val }
     return key
