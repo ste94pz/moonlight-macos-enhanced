@@ -39,6 +39,8 @@ typedef struct {
 @property(nonatomic, strong, nullable) NSTimer *accelTimer;
 @property(nonatomic) GCRotationRate lastGyroSample;
 @property(nonatomic) GCAcceleration lastAccelSample;
+@property(nonatomic) BOOL gyroAtRest;
+@property(nonatomic) NSUInteger gyroStationarySampleCount;
 @property(nonatomic) controller_touch_context_t primaryTouch;
 @property(nonatomic) controller_touch_context_t secondaryTouch;
 
