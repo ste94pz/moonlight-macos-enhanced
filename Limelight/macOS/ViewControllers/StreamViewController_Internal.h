@@ -505,6 +505,9 @@ static const NSTimeInterval MLStatsOverlayRefreshIntervalSec = 0.5;
 - (void)launchFailed:(NSString *)message;
 - (void)rumble:(unsigned short)controllerNumber lowFreqMotor:(unsigned short)lowFreqMotor highFreqMotor:(unsigned short)highFreqMotor;
 - (void)connectionStatusUpdate:(int)status;
+- (void)setMotionEventState:(uint16_t)controllerNumber
+                 motionType:(uint8_t)motionType
+               reportRateHz:(uint16_t)reportRateHz;
 - (Connection *)currentClipboardConnection;
 - (BOOL)isClipboardSyncEnabledForCurrentHost;
 - (BOOL)isClipboardSyncOwner;

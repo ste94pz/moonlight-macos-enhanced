@@ -52,6 +52,10 @@
      lowFreqMotor:(unsigned short)lowFreqMotor
     highFreqMotor:(unsigned short)highFreqMotor;
 
+- (void)setMotionEventState:(uint16_t)controllerNumber
+                 motionType:(uint8_t)motionType
+               reportRateHz:(uint16_t)reportRateHz;
+
 + (int)getConnectedGamepadMask:(StreamConfiguration *)streamConfig;
 
 - (NSUInteger)getConnectedGamepadCount;
