@@ -230,7 +230,7 @@
 "Edit Shortcut Translation Rule" = "Modifica la regola di traduzione della scorciatoia";
 "EDR Strategy" = "Strategia EDR";
 "EDR Strategy detail" = "Controlla l'aggressività con cui Metal Renderer utilizza l'headroom EDR disponibile sui display compatibili con HDR.";
-"Emulate Guide Button" = "Pulsante Emula guida (Avvia + Seleziona)";
+"Emulate Guide Button" = "Emula tasto Home (Start + Select)";
 "Enable" = "Abilita";
 "Enable Anyway" = "Abilita comunque";
 "Enable Microphone" = "Abilita microfono";
@@ -603,8 +603,8 @@
 "Review Later" = "Rivedi più tardi";
 "Risk Level" = "Livello di rischio";
 "Route Tier" = "Livello del percorso";
-"Rumble Controller" = "Controllore del rombo";
-"Running Game ID" = "Esecuzione dell'ID di gioco";
+"Rumble Controller" = "Vibrazione";
+"Running Game ID" = "ID del gioco in esecuzione";
 "Save" = "Salva";
 "Save Rule" = "Salva";
 "Screen Mode" = "Modalità schermo";
