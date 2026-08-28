@@ -18,5 +18,6 @@
     connectionCallbacks:(id<ConnectionCallbacks>)callback;
 
 - (void)stopStream;
+- (void)stopStreamWithCompletion:(dispatch_block_t)completion;
 
 @end

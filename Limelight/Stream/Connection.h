@@ -96,6 +96,7 @@ typedef struct {
 - (uint64_t)audioUnderrunCount;
 - (void)notifyInputStreamReadyForMicrophoneControlIfNeeded;
 - (void)terminate;
+- (void)terminateWithCompletion:(dispatch_block_t)completion;
 - (void)main;
 
 @end
