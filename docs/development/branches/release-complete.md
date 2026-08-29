@@ -12,6 +12,7 @@ The release currently integrates:
 
 - `feature/dualshock-motion-touchpad` for DualShock motion and touch input;
 - `fix/english-localization-coverage` for stable English keys and fallback coverage;
+- `feature/background-controller-input`, which depends on English localization coverage, for optional controller-derived input while the stream window is unfocused;
 - `feature/italian-localization`, which depends on the English coverage branch, for Italian selection and resources;
 - `fix/reconnect-lifecycle` for serialized stream teardown and reconnect;
 - release-owned build and packaging support.
@@ -22,6 +23,7 @@ The authoritative feature documents present in this branch are:
 
 - `docs/development/branches/dualshock-motion-touchpad.md`
 - `docs/development/branches/english-localization-coverage.md`
+- `docs/development/branches/background-controller-input.md`
 - `docs/development/branches/italian-localization.md`
 - `docs/development/branches/reconnect-lifecycle.md`
 
@@ -79,14 +81,15 @@ Build products live under ignored `build/` and `dist/`. Override them with `BUIL
 
 ## Feature interaction
 
-The integrated features occupy separate functional boundaries: DualShock changes the input/connection callback path, English coverage changes user-facing diagnostics/settings/menu call sites, Italian localization adds language selection and resources, and reconnect lifecycle changes stream teardown synchronization. Although several touch the stream UI area, the split localization branches make the call-site cleanup reusable without requiring Italian resources.
+The integrated features occupy separate functional boundaries: DualShock changes the input/connection callback path, background controller input separates controller-derived event gating from focus-sensitive physical keyboard/mouse gating, English coverage changes user-facing diagnostics/settings/menu call sites, Italian localization adds language selection and resources, and reconnect lifecycle changes stream teardown synchronization. Although several touch the stream UI area, the split localization branches make the call-site cleanup reusable without requiring Italian resources.
 
 This separation has two consequences:
 
 - controller motion/touch functionality must be tested under each supported UI language because errors, diagnostics and in-stream controls use the English coverage keys and locale resources;
+- background controller input must remain subordinate to stream readiness and teardown state: losing focus may preserve controller input when enabled, but reconnect or stop must disable it and clear the old input context;
 - localization changes to diagnostics must not alter raw tokens or callback/lifecycle behavior used to debug the controller path.
 
-Italian localization deliberately depends on `fix/english-localization-coverage`; the other source branches remain independently integrated. Every current source tip must be an ancestor of `release/complete` before distribution.
+Italian localization deliberately depends on `fix/english-localization-coverage` and integrates `feature/background-controller-input` so it can own the Italian values for that feature's UI keys. Every current source tip must be an ancestor of `release/complete` before distribution.
 
 ## Release invariants
 
@@ -107,9 +110,10 @@ Before distributing a complete build:
 2. Run shell syntax checks and build native plus every architecture intended for release. For universal, inspect main/helper with `lipo -archs` even though the helper script already fails missing slices.
 3. Launch the packaged app, switch System/English/Italian/Chinese, and verify settings, menus, connection editor, diagnostics, microphone/AWDL prompts and Italian privacy strings.
 4. Test DualShock 4 GameController and direct-HID paths, USB and Bluetooth where available: ordinary controls, touch/click, gyro/accelerometer, capture disable, device reconnect and stream reconnect.
-5. Cross-test: exercise controller diagnostics and failures while Italian is selected, and confirm localized presentation does not change raw diagnostic/classifier values.
-6. Test host launch/resume, video, direct/enhanced audio, mouse/keyboard, disconnect/reconnect and app termination to catch regressions outside the directly affected areas.
-7. If producing a DMG, mount it, copy the app, launch it under the intended signing/Gatekeeper conditions, and verify the embedded helper architecture/signature.
+5. With both HID and GameController drivers, test background controller input disabled and enabled while focus moves to another Moonlight window and another application. Include controller mouse emulation, live preference changes, hot-plug, reconnect and disconnect; physical keyboard and mouse input must remain focus-gated.
+6. Cross-test: exercise controller diagnostics and failures while Italian is selected, verify the background-input setting text, and confirm localized presentation does not change raw diagnostic/classifier values.
+7. Test host launch/resume, video, direct/enhanced audio, mouse/keyboard, disconnect/reconnect and app termination to catch regressions outside the directly affected areas.
+8. If producing a DMG, mount it, copy the app, launch it under the intended signing/Gatekeeper conditions, and verify the embedded helper architecture/signature.
 
 There is no automated unit/UI test target. Hardware sensor behavior, live language coverage, signing and packaging therefore require manual integration validation.
 
