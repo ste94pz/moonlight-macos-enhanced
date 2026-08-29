@@ -458,7 +458,7 @@ static const double MOUSE_SPEED_DIVISOR = 2.5;
                 short rightStickX, rightStickY;
                 unsigned char leftTrigger, rightTrigger;
 
-                if (limeController.isMouseMode) {
+                if (limeController.isMouseMode && self->_shouldSendInputEvents) {
                     // Mouse Toggle and Movement are handled by timer
                     
                     // Mouse Clicks (A = Left, B = Right)
@@ -1065,7 +1065,7 @@ static const double MOUSE_SPEED_DIVISOR = 2.5;
         }
         
         // 2. Mouse Movement Logic
-        if (controller.isMouseMode) {
+        if (controller.isMouseMode && _shouldSendInputEvents) {
             float deltaX = 0;
             float deltaY = 0;
             

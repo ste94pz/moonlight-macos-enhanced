@@ -425,6 +425,7 @@ static const NSTimeInterval MLStatsOverlayRefreshIntervalSec = 0.5;
 @property (nonatomic, strong) id settingsDidChangeObserver;
 @property (nonatomic, strong) id streamShortcutSettingsDidChangeObserver;
 @property (nonatomic, strong) id mouseSettingsDidChangeObserver;
+@property (nonatomic, strong) id controllerSettingsDidChangeObserver;
 @property (nonatomic, strong) id hostLatencyUpdatedObserver;
 
 @property (nonatomic) PendingWindowMode pendingWindowMode;
@@ -656,6 +657,7 @@ static const NSTimeInterval MLStatsOverlayRefreshIntervalSec = 0.5;
 - (BOOL)attemptPendingMouseExitedRecaptureIfNeededForEvent:(NSEvent *)event;
 - (BOOL)captureFreeMouseIfNeededForEvent:(NSEvent *)event;
 - (BOOL)hasReadyInputContext;
+- (void)refreshControllerInputSendingState;
 - (BOOL)canCaptureMouseNow;
 - (NSString *)mouseCaptureBlockerReason;
 - (void)ensureStreamWindowKeyIfPossible;
