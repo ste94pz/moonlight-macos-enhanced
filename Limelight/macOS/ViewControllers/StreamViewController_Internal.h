@@ -657,7 +657,6 @@ static const NSTimeInterval MLStatsOverlayRefreshIntervalSec = 0.5;
 - (BOOL)attemptPendingMouseExitedRecaptureIfNeededForEvent:(NSEvent *)event;
 - (BOOL)captureFreeMouseIfNeededForEvent:(NSEvent *)event;
 - (BOOL)hasReadyInputContext;
-- (void)refreshControllerInputSendingState;
 - (BOOL)canCaptureMouseNow;
 - (NSString *)mouseCaptureBlockerReason;
 - (void)ensureStreamWindowKeyIfPossible;
@@ -825,4 +824,5 @@ static const NSTimeInterval MLStatsOverlayRefreshIntervalSec = 0.5;
 
 @interface StreamViewController (InternalTeardown)
 - (void)tearDownControllerSupportOnMainThreadIfNeeded;
+- (void)refreshControllerInputSendingState;
 @end
