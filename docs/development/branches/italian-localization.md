@@ -6,7 +6,7 @@ Base branch: `fix/english-localization-coverage`
 
 ## Scope
 
-This branch adds Italian as a selectable and system-detected language on top of complete English localization coverage. It adds Italian resources and the minimum language-selection and Xcode project changes required to use them. Removal of hard-coded Simplified Chinese or bilingual UI belongs to the prerequisite English coverage branch.
+This branch adds Italian as a selectable and system-detected language on top of complete English localization coverage. It adds Italian resources and the minimum language-selection and Xcode project changes required to use them. Removal of hard-coded Simplified Chinese or bilingual UI belongs to the prerequisite English coverage branch. It also integrates maintained UI feature branches when Italian translations are required for their new keys.
 
 ## Resources and selection
 
@@ -27,6 +27,8 @@ The Italian table can contain more entries than the English `.strings` file beca
 ## Prerequisite maintenance
 
 The English coverage branch is the prerequisite and source of truth for keys and fallback behavior. Integrate it here before translating newly introduced UI or changing lookup behavior. Any English key or placeholder change requires a corresponding Italian coverage and format-parity review before this branch is integrated into `release/complete`.
+
+`feature/background-controller-input` is integrated after the English coverage prerequisite. This branch owns the Italian values for `Background Controller Input` and `Background Controller Input detail`; future changes to those source keys must be merged from the feature branch before updating the translations here.
 
 ## Verification
 
