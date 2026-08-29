@@ -72,6 +72,18 @@ Repeat independently for each selected feature/fix. `release/complete` receives 
 
 Changes made directly on `release/complete` should be limited to integration, packaging or complete-build logic. Record integration-specific behavior in `docs/development/branches/release-complete.md`, linking to feature documents instead of copying them. Run the normal build plus cross-feature manual checks before release.
 
+## Keep documentation aligned
+
+Documentation follows ownership and branch relationships, not copied commit identifiers:
+
+- Update the authoritative feature/fix document whenever its behavior, interfaces, invariants, dependencies or verification requirements change.
+- When one branch depends on another, integrate the prerequisite first and review both documents for assumptions that cross the branch boundary. For example, locale branches must follow the localization-key and fallback contract owned by the English coverage branch.
+- After adding, replacing, renaming or retiring a maintained branch, update the branch index on `master`, every directly dependent branch, and the composition document on `release/complete`.
+- After integrating a source branch, verify that its current tip is an ancestor of `release/complete` and that the release document describes responsibilities and relationships rather than transient commit hashes.
+- Before handoff, search all maintained branches for retired branch names, stale branch counts, missing document paths and claims about baselines or tips that the current graph no longer supports.
+
+Treat this review as part of the change itself, not as optional release cleanup. Keep internal documentation in separate `docs:` commits unless a deliberately amended documentation commit was agreed.
+
 ## Prepare an upstream PR
 
 Create the PR branch from the upstream baseline, not from a fork feature branch:
