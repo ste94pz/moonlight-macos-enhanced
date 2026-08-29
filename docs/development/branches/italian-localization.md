@@ -24,6 +24,10 @@ Use a stable English key at the call site and add its Italian value to `it.lproj
 
 The Italian table can contain more entries than the English `.strings` file because English values also live in `LanguageManager.en`; raw key counts are not a completeness invariant.
 
+## Prerequisite maintenance
+
+The English coverage branch is the prerequisite and source of truth for keys and fallback behavior. Integrate it here before translating newly introduced UI or changing lookup behavior. Any English key or placeholder change requires a corresponding Italian coverage and format-parity review before this branch is integrated into `release/complete`.
+
 ## Verification
 
 Run `plutil -lint` for all English, Italian and Simplified Chinese `.strings` files, build the `Moonlight for macOS` scheme, and confirm `it.lproj` is copied into the app bundle. Test System, English, Italiano and Simplified Chinese selection, including `it-*` system preferences, format-bearing strings, menus, diagnostics, connection editor, log views, and microphone/AWDL permission paths.
