@@ -2,9 +2,7 @@
 
 Branch: `fix/reconnect-lifecycle`
 
-Baseline: merge-base with `master` at `a9f20cc`
-
-Functional commit: `9d82bcc` (`fix(streaming): serialize reconnect teardown`)
+Development base: `master`. Later documentation merges may advance the graph merge-base without changing the fix's functional baseline.
 
 ## Scope
 
@@ -18,7 +16,7 @@ The history and code show the unsafe ordering, but do not contain a reproducible
 - `Limelight/Stream/StreamManager.h/.m`: adds `stopStreamWithCompletion:`, coalesced manager stop state and a completion boundary over `Connection` teardown.
 - `Limelight/macOS/ViewControllers/StreamViewController+Diagnostics.m`: reconnect now uses that boundary, validates reconnect generation/state after teardown, adds a 15-second teardown watchdog, and takes a safer presentation-mode snapshot.
 
-Existing generation forwarding in `StreamViewController.m`, window-mode application in `StreamViewController.m`/`+WindowModes.m`, and lifecycle fields in `StreamViewController_Internal.h` are not introduced by this commit, but they are required context for the solution.
+Existing generation forwarding in `StreamViewController.m`, window-mode application in `StreamViewController.m`/`+WindowModes.m`, and lifecycle fields in `StreamViewController_Internal.h` are not introduced by this fix, but they are required context for the solution.
 
 ## Connection termination
 
@@ -115,7 +113,7 @@ When the replacement connection starts, `connectionStarted` consumes the preserv
 - The 15-second watchdog does not terminate a wedged native stop. The user can exit the UI, but the async teardown may remain blocked and retains its `Connection`.
 - `beginStopStreamIfNeededWithReason:completion:` in `StreamViewController` predates this fix and, when `stopStreamInProgress` is already true, dispatches a new completion immediately rather than coalescing it with the underlying stop. The strong completion-preservation guarantee applies to the new `Connection` and `StreamManager` APIs, not every controller-level close request.
 - The presentation fallback uses configured mode whenever neither fullscreen nor borderless is observed, even outside a recorded fullscreen transition; `pendingWindowMode` is diagnostic only.
-- No automated concurrency or reconnect tests are present, and the commit does not establish which failure mode, AppKit transition timing or host/network conditions reproduced the original issue.
+- No automated concurrency or reconnect tests are present, and repository history does not establish which failure mode, AppKit transition timing or host/network conditions reproduced the original issue.
 
 ## Verification
 
