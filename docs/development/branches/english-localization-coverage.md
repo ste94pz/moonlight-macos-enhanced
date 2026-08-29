@@ -28,6 +28,10 @@ The branch also registers the existing English and Simplified Chinese `InfoPlist
 - Keep `LanguageChanged` compatible across Objective-C and Swift callers.
 - New UI should start from a stable English key and remain usable when a non-English translation is missing.
 
+## Dependent locales
+
+This branch owns the localization-key and English-fallback contract used by locale branches. When keys, placeholders, fallback order or resource membership change, review every maintained locale branch before release integration. Merge this branch into dependent locale branches first so translations are updated against the same source-key set rather than repaired only on `release/complete`.
+
 ## Verification
 
 Run `plutil -lint` for the English and Simplified Chinese `Localizable.strings` and `InfoPlist.strings` files, inspect the Xcode resource variant groups, and build the `Moonlight for macOS` scheme. Manually check English and Simplified Chinese settings, menus, diagnostics, connection editor, log views, and microphone/AWDL error paths.
