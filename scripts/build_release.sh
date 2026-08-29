@@ -14,7 +14,7 @@ readonly OPENSSL_FRAMEWORK_DIR="${DERIVED_DATA_PATH}/SourcePackages/artifacts/op
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/build_release.sh [--arch ARCH] [--dmg] [-- XCODEBUILD_OPTION ...]
+Usage: ./scripts/build_release.sh [--debug] [--arch ARCH] [--dmg] [-- XCODEBUILD_OPTION ...]
 
 Architectures:
   native     Current Mac architecture (default)
@@ -26,11 +26,14 @@ Output (default):
   dist/Moonlight-macOS-ARCH.app
 
 Options:
+  --debug     Build Debug for the standard macOS destination in Xcode Derived Data
   --dmg       Also create dist/Moonlight-macOS-Enhanced-ARCH.dmg
 EOF
 }
 
 requested_arch="native"
+arch_option_set=0
+debug_build=0
 create_disk_image=0
 xcodebuild_args=()
 while (($# > 0)); do
@@ -42,10 +45,15 @@ while (($# > 0)); do
         exit 2
       fi
       requested_arch="$2"
+      arch_option_set=1
       shift 2
       ;;
     --dmg)
       create_disk_image=1
+      shift
+      ;;
+    --debug)
+      debug_build=1
       shift
       ;;
     -h|--help)
@@ -63,6 +71,18 @@ while (($# > 0)); do
       ;;
   esac
 done
+
+if ((debug_build == 1 && create_disk_image == 1)); then
+  echo "error: --debug cannot be combined with --dmg" >&2
+  usage >&2
+  exit 2
+fi
+
+if ((debug_build == 1 && arch_option_set == 1)); then
+  echo "error: --debug cannot be combined with --arch" >&2
+  usage >&2
+  exit 2
+fi
 
 case "${requested_arch}" in
   native)
@@ -120,22 +140,39 @@ SRCROOT="${REPO_ROOT}" PROJECT_DIR="${REPO_ROOT}" \
 
 echo "Building ${SCHEME}"
 echo "$(<"${VERSION_CONFIG}")"
-echo "Architectures: ${build_arch}"
-echo "Output directory: ${OUTPUT_DIR}"
+if ((debug_build == 1)); then
+  echo "Configuration: Debug"
+  echo "Destination: standard macOS destination and Xcode Derived Data"
+else
+  echo "Configuration: Release"
+  echo "Architectures: ${build_arch}"
+  echo "Output directory: ${OUTPUT_DIR}"
+fi
 
-xcodebuild_command=(
-  xcodebuild
-  -project "${PROJECT}"
-  -scheme "${SCHEME}"
-  -configuration Release
-  -destination "platform=macOS,arch=$( [[ "${requested_arch}" == universal ]] && echo "$(uname -m)" || echo "${build_arch}" )"
-  -derivedDataPath "${DERIVED_DATA_PATH}"
-  build
-  ARCHS="${build_arch}"
-  ONLY_ACTIVE_ARCH="$( [[ "${requested_arch}" == universal ]] && echo NO || echo YES )"
-  CLANG_ENABLE_EXPLICIT_MODULES=NO
-  "FRAMEWORK_SEARCH_PATHS=\$(inherited) ${OPENSSL_FRAMEWORK_DIR}"
-)
+if ((debug_build == 1)); then
+  xcodebuild_command=(
+    xcodebuild
+    -project "${PROJECT}"
+    -scheme "${SCHEME}"
+    -configuration Debug
+    -destination "platform=macOS"
+    build
+  )
+else
+  xcodebuild_command=(
+    xcodebuild
+    -project "${PROJECT}"
+    -scheme "${SCHEME}"
+    -configuration Release
+    -destination "platform=macOS,arch=$( [[ "${requested_arch}" == universal ]] && echo "$(uname -m)" || echo "${build_arch}" )"
+    -derivedDataPath "${DERIVED_DATA_PATH}"
+    build
+    ARCHS="${build_arch}"
+    ONLY_ACTIVE_ARCH="$( [[ "${requested_arch}" == universal ]] && echo NO || echo YES )"
+    CLANG_ENABLE_EXPLICIT_MODULES=NO
+    "FRAMEWORK_SEARCH_PATHS=\$(inherited) ${OPENSSL_FRAMEWORK_DIR}"
+  )
+fi
 
 code_signing_overridden=0
 for ((i = 0; i < ${#xcodebuild_args[@]}; i++)); do
@@ -167,6 +204,27 @@ if ((${#xcodebuild_args[@]} > 0)); then
 fi
 
 "${xcodebuild_command[@]}"
+
+if ((debug_build == 1)); then
+  debug_build_settings_command=(
+    xcodebuild
+    -project "${PROJECT}"
+    -scheme "${SCHEME}"
+    -configuration Debug
+    -destination "platform=macOS"
+    -showBuildSettings
+  )
+  if ((${#xcodebuild_args[@]} > 0)); then
+    debug_build_settings_command+=("${xcodebuild_args[@]}")
+  fi
+  debug_build_settings="$("${debug_build_settings_command[@]}")"
+  debug_target_build_dir="$(awk -F ' = ' '/^[[:space:]]*TARGET_BUILD_DIR = / { print $2; exit }' <<<"${debug_build_settings}")"
+  debug_full_product_name="$(awk -F ' = ' '/^[[:space:]]*FULL_PRODUCT_NAME = / { print $2; exit }' <<<"${debug_build_settings}")"
+
+  echo "Debug app created:"
+  echo "  ${debug_target_build_dir}/${debug_full_product_name}"
+  exit 0
+fi
 
 if [[ ! -x "${MAIN_BINARY}" ]]; then
   echo "error: expected app binary not found at ${MAIN_BINARY}" >&2

@@ -45,6 +45,7 @@ Run from the repository root:
 ./scripts/build_release.sh --arch x86_64
 ./scripts/build_release.sh --arch universal
 ./scripts/build_release.sh --arch universal --dmg
+./scripts/build_release.sh --debug
 ```
 
 Options after `--` are appended to `xcodebuild`, for example an unsigned verification build:
@@ -62,6 +63,12 @@ The helper:
 5. verifies both `Moonlight.app/Contents/MacOS/Moonlight` and the embedded AWDL helper exist and contain every requested architecture using `lipo`;
 6. replaces only the architecture-specific app at `dist/Moonlight-macOS-<variant>.app` using `ditto`;
 7. optionally creates a DMG with `create-dmg`, falling back to `hdiutil`.
+
+With `--debug`, the helper instead runs the scheme's Debug configuration for
+the standard `platform=macOS` destination, leaves build products in Xcode's
+standard Derived Data location, and skips release verification and packaging.
+This mode cannot be combined with `--arch` or `--dmg`; arguments after `--`
+are still forwarded to `xcodebuild`.
 
 Build products live under ignored `build/` and `dist/`. Override them with `BUILD_DIR`, `DERIVED_DATA_PATH` and `OUTPUT_DIR` when isolation is required. A signing identity may be selected through normal Xcode settings/arguments; `SIGNING_TEAM_ID` only affects the helper's identity-availability decision.
 
