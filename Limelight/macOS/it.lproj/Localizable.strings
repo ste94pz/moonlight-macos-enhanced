@@ -93,6 +93,8 @@
 "AWDL Stability Helper" = "Servizio di stabilità AWDL";
 "Back" = "Indietro";
 "Back to Computers" = "Torniamo ai computer";
+"Background Controller Input" = "Input del controller in background";
+"Background Controller Input detail" = "Continua a inviare gli input del controller all'host quando la finestra dello streaming non è in primo piano.";
 "Balanced" = "Equilibrato";
 "Balanced (Recommended)" = "Bilanciato (consigliato)";
 "Basic Scaling" = "Ridimensionamento di base";
