@@ -25,7 +25,8 @@ See [WORKFLOW.md](WORKFLOW.md) for commands and update procedures.
 The branch list, not this page, determines what is currently shipped. The presently maintained branch-specific work is:
 
 - `feature/dualshock-motion-touchpad`: DualShock 4 motion and touchpad input; authoritative document `branches/dualshock-motion-touchpad.md` on that branch.
-- `feature/english-italian-localization`: completion of English-facing strings and Italian resources; authoritative document `branches/english-italian-localization.md` on that branch.
+- `fix/english-localization-coverage`: removal of hard-coded non-English UI text and completion of English fallback coverage; authoritative document `branches/english-localization-coverage.md` on that branch.
+- `feature/italian-localization`: Italian language selection and resources layered on the English coverage branch; authoritative document `branches/italian-localization.md` on that branch.
 - `fix/reconnect-lifecycle`: completion-aware, serialized teardown before reconnect; authoritative document `branches/reconnect-lifecycle.md` when that branch is checked out or integrated.
 - `release/complete`: integration of the two feature branches above plus release-specific build logic; authoritative document `branches/release-complete.md` on that branch.
 
