@@ -2,9 +2,7 @@
 
 Branch: `feature/dualshock-motion-touchpad`
 
-Baseline: merge-base with `master` at `a9f20cc`
-
-Functional commits: `f023bee`, `8711a47`
+Development base: `master`. Later documentation merges may advance the graph merge-base without changing the feature's functional baseline.
 
 ## Scope
 
