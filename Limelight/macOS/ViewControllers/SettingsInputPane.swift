@@ -379,6 +379,14 @@ struct InputView: View {
 
       Divider()
 
+      ToggleCell(
+        title: "Background Controller Input",
+        hintKey: "Background Controller Input detail",
+        boolBinding: $settingsModel.backgroundControllerInput
+      )
+
+      Divider()
+
       DisclosureGroup(
         isExpanded: $controllerAdvancedExpanded,
         content: {

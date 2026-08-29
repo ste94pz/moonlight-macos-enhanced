@@ -502,6 +502,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
     [self tearDownStreamLifecycleObserversAndTimers];
 
     self.hidSupport.shouldSendInputEvents = NO;
+    self.hidSupport.shouldSendControllerEvents = NO;
     self.controllerSupport.shouldSendInputEvents = NO;
     self.hidSupport.inputContext = NULL;
     self.controllerSupport.inputContext = NULL;
@@ -696,6 +697,21 @@ highFreqMotor:(unsigned short)highFreqMotor {
         NSString *setting = note.userInfo[@"setting"];
         [strongSelf applyLiveMouseSettingsRefreshForSetting:setting];
     }];
+    self.controllerSettingsDidChangeObserver = [[NSNotificationCenter defaultCenter] addObserverForName:@"MoonlightControllerSettingsDidChange" object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification *note) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) {
+            return;
+        }
+
+        NSString *hostId = note.userInfo[@"hostId"];
+        if (hostId.length > 0 &&
+            ![hostId isEqualToString:@"__global__"] &&
+            ![hostId isEqualToString:strongSelf.app.host.uuid]) {
+            return;
+        }
+
+        [strongSelf refreshControllerInputSendingState];
+    }];
     self.hostLatencyUpdatedObserver = [[NSNotificationCenter defaultCenter] addObserverForName:@"HostLatencyUpdated" object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification *note) {
         [weakSelf updateWindowSubtitle];
     }];
@@ -818,6 +834,32 @@ highFreqMotor:(unsigned short)highFreqMotor {
     self.controllerSupport = nil;
 }
 
+- (void)refreshControllerInputSendingState {
+    if (![NSThread isMainThread]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self refreshControllerInputSendingState];
+        });
+        return;
+    }
+
+    BOOL streamCanSendInput = !self.stopStreamInProgress &&
+        !self.reconnectInProgress &&
+        [self hasReadyInputContext];
+    BOOL focusedInputEnabled = self.hidSupport.shouldSendInputEvents;
+    BOOL backgroundInputEnabled =
+        [SettingsClass backgroundControllerInputFor:self.app.host.uuid];
+    BOOL shouldSendControllerInput = streamCanSendInput &&
+        (focusedInputEnabled || backgroundInputEnabled);
+
+    self.hidSupport.shouldSendControllerEvents = shouldSendControllerInput;
+    self.controllerSupport.shouldSendInputEvents = shouldSendControllerInput;
+    Log(LOG_I, @"Controller input state updated: enabled=%d focusedInput=%d background=%d ready=%d",
+        shouldSendControllerInput ? 1 : 0,
+        focusedInputEnabled ? 1 : 0,
+        backgroundInputEnabled ? 1 : 0,
+        streamCanSendInput ? 1 : 0);
+}
+
 - (void)tearDownStreamLifecycleObserversAndTimers {
     NSNotificationCenter *defaultCenter = [NSNotificationCenter defaultCenter];
 
@@ -860,6 +902,10 @@ highFreqMotor:(unsigned short)highFreqMotor {
     if (self.mouseSettingsDidChangeObserver != nil) {
         [defaultCenter removeObserver:self.mouseSettingsDidChangeObserver];
         self.mouseSettingsDidChangeObserver = nil;
+    }
+    if (self.controllerSettingsDidChangeObserver != nil) {
+        [defaultCenter removeObserver:self.controllerSettingsDidChangeObserver];
+        self.controllerSettingsDidChangeObserver = nil;
     }
     if (self.hostLatencyUpdatedObserver != nil) {
         [defaultCenter removeObserver:self.hostLatencyUpdatedObserver];
@@ -1356,6 +1402,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
                 self.hidSupport.inputContext = inputContext;
                 self.controllerSupport.inputContext = inputContext;
                 self.hidSupport.shouldSendInputEvents = YES;
+                self.hidSupport.shouldSendControllerEvents = YES;
                 self.controllerSupport.shouldSendInputEvents = YES;
                 [self.streamMan.connection notifyInputStreamReadyForMicrophoneControlIfNeeded];
                 [self rearmMouseCaptureIfPossibleWithReason:@"input-stream-established"];
@@ -1433,6 +1480,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
                     self.controllerSupport.inputContext = inputContext;
                     // Ensure input is enabled immediately after stream start
                     self.hidSupport.shouldSendInputEvents = YES;
+                    self.hidSupport.shouldSendControllerEvents = YES;
                     self.controllerSupport.shouldSendInputEvents = YES;
 
                     // If input stream isn't initialized yet, retry briefly to bind after start

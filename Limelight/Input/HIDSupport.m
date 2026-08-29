@@ -877,7 +877,7 @@ static void HIDDispatchSyntheticRemoteModifierTap(HIDSupport *support,
 
 
 - (void)sendControllerEvent {
-    if (self.shouldSendInputEvents) {
+    if (self.shouldSendControllerEvents) {
         // Capture state
         int playerIndex = self.controller.playerIndex;
         int lastButtonFlags = self.controller.lastButtonFlags;
@@ -2540,7 +2540,7 @@ void myHIDDeviceRemovalCallback(void * _Nullable        context,
     }
     
     // Mouse Click Logic
-    if (self.controller.isMouseMode) {
+    if (self.controller.isMouseMode && self.shouldSendControllerEvents) {
         if (flag == A_FLAG) {
             // Left Click
             if (set) {
