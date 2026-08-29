@@ -78,6 +78,7 @@ typedef struct {
 - (BOOL)getVideoDiagnosticSnapshot:(MLVideoDiagnosticSnapshot *)snapshot;
 - (void)notifyInputStreamReadyForMicrophoneControlIfNeeded;
 - (void)terminate;
+- (void)terminateWithCompletion:(dispatch_block_t)completion;
 - (void)main;
 
 @end

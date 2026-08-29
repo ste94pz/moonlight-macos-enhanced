@@ -2355,15 +2355,31 @@
         return;
     }
 
-    // Preserve fullscreen/windowed state across reconnects.
+    // Preserve the live presentation mode across reconnects. AppKit may
+    // temporarily report a regular window while a fullscreen transition is in
+    // flight, so a plain styleMask snapshot is not sufficient. In that case,
+    // fall back to Moonlight's configured display mode instead of incorrectly
+    // saving windowed and forcing the fullscreen window to shrink after the
+    // connection comes back.
     self.reconnectPreserveFullscreenStateValid = YES;
-    if ([self isWindowFullscreen]) {
+    NSInteger configuredDisplayMode = [SettingsClass displayModeFor:self.app.host.uuid];
+    BOOL observedFullscreen = [self isWindowFullscreen];
+    BOOL observedBorderless = [self isWindowBorderlessMode];
+    if (observedFullscreen) {
         self.reconnectPreservedWindowMode = 1;
-    } else if ([self isWindowBorderlessMode]) {
+    } else if (observedBorderless) {
         self.reconnectPreservedWindowMode = 2;
     } else {
-        self.reconnectPreservedWindowMode = 0;
+        self.reconnectPreservedWindowMode = configuredDisplayMode;
     }
+    Log(LOG_I, @"[diag] Reconnect display mode snapshot: observedFullscreen=%d observedBorderless=%d transition=%d pending=%ld configured=%ld preserved=%ld style=%llu",
+        observedFullscreen ? 1 : 0,
+        observedBorderless ? 1 : 0,
+        self.fullscreenTransitionInProgress ? 1 : 0,
+        (long)self.pendingWindowMode,
+        (long)configuredDisplayMode,
+        (long)self.reconnectPreservedWindowMode,
+        (unsigned long long)self.view.window.styleMask);
 
     NSUInteger reconnectGeneration = 0;
     @synchronized (self) {
@@ -2389,11 +2405,10 @@
     [self suppressConnectionWarningsForSeconds:5.0 reason:[NSString stringWithFormat:@"reconnect-%@", reason ?: @"unknown"]];
 
     __weak typeof(self) weakSelf = self;
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        double stopStart = CACurrentMediaTime();
-        [weakSelf.streamMan stopStream];
-        Log(LOG_I, @"Reconnect stop took %.3fs", CACurrentMediaTime() - stopStart);
-
+    StreamManager *stoppingStreamManager = self.streamMan;
+    double stopStart = CACurrentMediaTime();
+    [stoppingStreamManager stopStreamWithCompletion:^{
+        Log(LOG_I, @"Reconnect stop completed in %.3fs", CACurrentMediaTime() - stopStart);
         dispatch_async(dispatch_get_main_queue(), ^{
             __strong typeof(weakSelf) strongSelf = weakSelf;
             if (!strongSelf) {
@@ -2419,6 +2434,9 @@
                 return;
             }
 
+            if (strongSelf.streamMan == stoppingStreamManager) {
+                strongSelf.streamMan = nil;
+            }
             if (strongSelf.useSystemControllerDriver) {
                 [strongSelf tearDownControllerSupportOnMainThreadIfNeeded];
             }
@@ -2428,6 +2446,29 @@
             // Restart streaming without leaving the page.
             [strongSelf prepareForStreaming];
         });
+    }];
+
+    // The connect watchdog starts only after prepareForStreaming. Cover the
+    // teardown phase too, otherwise a wedged native stop leaves the spinner up
+    // forever with no way for the user to recover from this window.
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(15.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf ||
+            ![strongSelf isActiveStreamGeneration:reconnectGeneration] ||
+            !strongSelf.reconnectInProgress ||
+            !strongSelf.stopStreamInProgress) {
+            return;
+        }
+
+        Log(LOG_E, @"[diag] Reconnect teardown timed out: reason=%@ gen=%lu",
+            reason ?: @"unknown",
+            (unsigned long)reconnectGeneration);
+        strongSelf.stopStreamInProgress = NO;
+        strongSelf.reconnectInProgress = NO;
+        [strongSelf hideReconnectOverlay];
+        [strongSelf showErrorOverlayWithTitle:MLString(@"Reconnect timed out", nil)
+                                      message:MLString(@"The previous connection could not be stopped. You can close this stream and try again.", nil)
+                                      canWait:NO];
     });
 }
 

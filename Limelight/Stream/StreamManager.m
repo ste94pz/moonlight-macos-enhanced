@@ -26,6 +26,9 @@
     Connection* _connection;
     NSOperationQueue* _connectionQueue;
     VideoDecoderRenderer* _renderer;
+    BOOL _stopStarted;
+    BOOL _stopCompleted;
+    NSMutableArray<dispatch_block_t> *_stopCompletions;
 }
 
 @synthesize connection = _connection;
@@ -167,11 +170,60 @@
 
 - (void) stopStream
 {
-    [self cancel];
-    [_connectionQueue cancelAllOperations];
-    _connectionQueue = nil;
-    [_connection terminate];
-    _callbacks = nil;
+    [self stopStreamWithCompletion:nil];
+}
+
+- (void)stopStreamWithCompletion:(dispatch_block_t)completion
+{
+    __block BOOL shouldStartStop = NO;
+    __block Connection *connection = nil;
+    @synchronized (self) {
+        if (_stopCompleted) {
+            if (completion) {
+                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), completion);
+            }
+            return;
+        }
+
+        if (completion) {
+            if (_stopCompletions == nil) {
+                _stopCompletions = [NSMutableArray array];
+            }
+            [_stopCompletions addObject:[completion copy]];
+        }
+
+        if (!_stopStarted) {
+            _stopStarted = YES;
+            shouldStartStop = YES;
+            connection = _connection;
+            [self cancel];
+            [_connectionQueue cancelAllOperations];
+            _connectionQueue = nil;
+            _callbacks = nil;
+        }
+    }
+
+    if (!shouldStartStop) {
+        return;
+    }
+
+    void (^finishStop)(void) = ^{
+        NSArray<dispatch_block_t> *completions = nil;
+        @synchronized (self) {
+            self->_stopCompleted = YES;
+            completions = [self->_stopCompletions copy];
+            [self->_stopCompletions removeAllObjects];
+        }
+        for (dispatch_block_t pendingCompletion in completions) {
+            pendingCompletion();
+        }
+    };
+
+    if (connection) {
+        [connection terminateWithCompletion:finishStop];
+    } else {
+        finishStop();
+    }
 }
 
 - (BOOL) launchApp:(HttpManager*)hMan {

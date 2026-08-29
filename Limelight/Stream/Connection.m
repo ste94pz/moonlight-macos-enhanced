@@ -146,6 +146,9 @@ typedef NS_ENUM(NSInteger, MLAudioRendererBackend) {
 
     ML_CONNECTION_CONTEXT _connectionContext;
     NSLock *_initLock;
+    BOOL _terminationStarted;
+    BOOL _terminationCompleted;
+    NSMutableArray<dispatch_block_t> *_terminationCompletions;
 
     VideoDecoderRenderer *_renderer;
     id<ConnectionCallbacks> _callbacks;
@@ -2266,6 +2269,40 @@ void ClClipboardItemReceived(const LI_CLIPBOARD_ITEM *item)
 
 -(void) terminate
 {
+    [self terminateWithCompletion:nil];
+}
+
+-(void) terminateWithCompletion:(dispatch_block_t)completion
+{
+    BOOL shouldStartTermination = NO;
+    @synchronized (self) {
+        if (_terminationCompleted) {
+            if (completion) {
+                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), completion);
+            }
+            return;
+        }
+
+        if (completion) {
+            if (_terminationCompletions == nil) {
+                _terminationCompletions = [NSMutableArray array];
+            }
+            [_terminationCompletions addObject:[completion copy]];
+        }
+
+        if (!_terminationStarted) {
+            _terminationStarted = YES;
+            shouldStartTermination = YES;
+        }
+    }
+
+    // LiStopConnectionCtx() is not safe to invoke twice for the same context.
+    // Reconnect and defensive cleanup paths can both request termination, so
+    // coalesce them and notify every caller when the single teardown completes.
+    if (!shouldStartTermination) {
+        return;
+    }
+
     // Interrupt any action blocking LiStartConnection(). This is
     // thread-safe and done outside initLock on purpose, since we
     // won't be able to acquire it if LiStartConnection is in
@@ -2294,6 +2331,16 @@ void ClClipboardItemReceived(const LI_CLIPBOARD_ITEM *item)
         LiStopConnectionCtx(ctx);
         os_unfair_lock_unlock(&gConnectionLifecycleLock);
         UnregisterConnection(ctx);
+
+        NSArray<dispatch_block_t> *completions = nil;
+        @synchronized (conn) {
+            conn->_terminationCompleted = YES;
+            completions = [conn->_terminationCompletions copy];
+            [conn->_terminationCompletions removeAllObjects];
+        }
+        for (dispatch_block_t completion in completions) {
+            completion();
+        }
         // conn is released here after the block completes, ensuring
         // the Connection object stays alive throughout cleanup
     });
@@ -2747,7 +2794,7 @@ void ClClipboardItemReceived(const LI_CLIPBOARD_ITEM *item)
     __block int result = -1;
     void (^operation)(void) = ^{
         [self ensureControlContextBacklink];
-        LiSetThreadConnectionContext(&_connectionContext);
+        LiSetThreadConnectionContext(&self->_connectionContext);
         os_unfair_lock_lock(&gConnectionLifecycleLock);
         result = block();
         os_unfair_lock_unlock(&gConnectionLifecycleLock);
