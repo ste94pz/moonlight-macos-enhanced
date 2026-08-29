@@ -1,0 +1,5 @@
+/* Descrizione mostrata da macOS quando viene richiesto l'accesso al microfono */
+"NSMicrophoneUsageDescription" = "Serve per acquisire l'audio del microfono e trasmetterlo in streaming all'host.";
+
+/* Descrizione mostrata da macOS quando viene richiesto il monitoraggio dell'input */
+"NSInputMonitoringUsageDescription" = "Serve per acquisire l'input del mouse ad alta frequenza e offrire controlli di streaming a bassa latenza.";

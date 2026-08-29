@@ -61,7 +61,9 @@
 		A42858452D5066A000E39078 /* SDL2.xcframework */ = {isa = PBXFileReference; expectedSignature = "AppleDeveloperProgram:KHSNQKXT55:Martin Kenny"; lastKnownFileType = wrapper.xcframework; name = SDL2.xcframework; path = xcframeworks/SDL2.xcframework; sourceTree = "<group>"; };
 		A4B1C1002D9F0A1B00C0FF02 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Limelight/macOS/en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		A4B1C1002D9F0A1B00C0FF03 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "Limelight/macOS/zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		A4B1C1002D9F0A1B00C0FF05 /* it */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = it; path = Limelight/macOS/it.lproj/Localizable.strings; sourceTree = "<group>"; };
 		A4B1C1002D9F0A1B00C0FF07 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Limelight/macOS/en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A4B1C1002D9F0A1B00C0FF08 /* it */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = it; path = Limelight/macOS/it.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		A4B1C1002D9F0A1B00C0FF09 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "Limelight/macOS/zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -303,6 +305,7 @@
 			knownRegions = (
 				en,
 				Base,
+				it,
 				"zh-Hans",
 			);
 			mainGroup = FB290CE519B2C406004C83CF;
@@ -398,6 +401,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				A4B1C1002D9F0A1B00C0FF02 /* en */,
+				A4B1C1002D9F0A1B00C0FF05 /* it */,
 				A4B1C1002D9F0A1B00C0FF03 /* zh-Hans */,
 			);
 			name = Localizable.strings;
@@ -407,6 +411,7 @@
 			isa = PBXVariantGroup;
 			children = (
 				A4B1C1002D9F0A1B00C0FF07 /* en */,
+				A4B1C1002D9F0A1B00C0FF08 /* it */,
 				A4B1C1002D9F0A1B00C0FF09 /* zh-Hans */,
 			);
 			name = InfoPlist.strings;
