@@ -190,6 +190,8 @@ class SettingsClass: NSObject {
         "autoFullscreen": settings.autoFullscreen,
         "displayMode": settings.displayMode ?? (settings.autoFullscreen ? 1 : 0),
         "rumble": settings.rumble,
+        "backgroundControllerInput": settings.backgroundControllerInput
+          ?? SettingsModel.defaultBackgroundControllerInput,
         "controllerDriver": settings.controllerDriver,
         "mouseDriver": settings.mouseDriver,
         "coreHIDMaxMouseReportRate": settings.coreHIDMaxMouseReportRate
@@ -358,6 +360,7 @@ class SettingsClass: NSObject {
       autoFullscreen: settings.autoFullscreen,
       displayMode: settings.displayMode,
       rumble: settings.rumble,
+      backgroundControllerInput: settings.backgroundControllerInput,
       controllerDriver: settings.controllerDriver,
       mouseDriver: settings.mouseDriver,
       coreHIDAutoEnabled: settings.coreHIDAutoEnabled,
@@ -462,6 +465,7 @@ class SettingsClass: NSObject {
         autoFullscreen: updated.autoFullscreen,
         displayMode: updated.displayMode,
         rumble: updated.rumble,
+        backgroundControllerInput: updated.backgroundControllerInput,
         controllerDriver: updated.controllerDriver,
         mouseDriver: updated.mouseDriver,
         coreHIDAutoEnabled: updated.coreHIDAutoEnabled,
@@ -568,6 +572,7 @@ class SettingsClass: NSObject {
       autoFullscreen: settings.autoFullscreen,
       displayMode: settings.displayMode,
       rumble: settings.rumble,
+      backgroundControllerInput: settings.backgroundControllerInput,
       controllerDriver: settings.controllerDriver,
       mouseDriver: settings.mouseDriver,
       coreHIDAutoEnabled: settings.coreHIDAutoEnabled,
@@ -844,6 +849,14 @@ class SettingsClass: NSObject {
     }
 
     return SettingsModel.defaultRumble
+  }
+
+  @objc static func backgroundControllerInput(for key: String) -> Bool {
+    if let settings = Settings.getSettings(for: key) {
+      return settings.backgroundControllerInput ?? SettingsModel.defaultBackgroundControllerInput
+    }
+
+    return SettingsModel.defaultBackgroundControllerInput
   }
 
   @objc static func controllerDriver(for key: String) -> Int {
