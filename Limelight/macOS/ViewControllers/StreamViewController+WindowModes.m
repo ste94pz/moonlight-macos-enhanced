@@ -534,7 +534,9 @@
 }
 
 - (BOOL)isWindowFullscreen {
-    return [self.view.window styleMask] & NSWindowStyleMaskFullScreen;
+    // NSWindowStyleMaskFullScreen is bit 14. Returning the masked integer
+    // directly through Objective-C BOOL can truncate 0x4000 to zero on x86_64.
+    return ([self.view.window styleMask] & NSWindowStyleMaskFullScreen) != 0;
 }
 
 - (BOOL)isOurWindowTheWindowInNotiifcation:(NSNotification *)note {

@@ -2449,6 +2449,7 @@
 
     // Suppress transient warnings while we tear down/restart.
     [self suppressConnectionWarningsForSeconds:5.0 reason:[NSString stringWithFormat:@"reconnect-%@", reason ?: @"unknown"]];
+    [self releaseClipboardSyncOwnershipWithUnbind:YES];
 
     __weak typeof(self) weakSelf = self;
     StreamManager *stoppingStreamManager = self.streamMan;

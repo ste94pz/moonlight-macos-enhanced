@@ -993,7 +993,6 @@
     }
 
     if (self.edgeMenuPanel && self.edgeMenuButton) {
-        [self attachEdgeMenuPanelToWindowIfNeeded];
         [self requestStreamMenuEntrypointsVisibilityUpdate];
         return;
     }
@@ -1069,7 +1068,6 @@
     };
     [panelContentView addSubview:self.edgeMenuButton];
 
-    [self attachEdgeMenuPanelToWindowIfNeeded];
     [self updateEdgeMenuButtonAppearance];
     [self updateControlCenterEntrypointHints];
     [self requestStreamMenuEntrypointsVisibilityUpdate];
@@ -1096,8 +1094,8 @@
         return;
     }
 
-    [self attachEdgeMenuPanelToWindowIfNeeded];
     [self.edgeMenuPanel setFrame:[self frameForCurrentEdgeMenuPanelStateInScreenRect:anchorRect] display:YES];
+    [self attachEdgeMenuPanelToWindowIfNeeded];
     [self.edgeMenuPanel orderFront:nil];
     [self updateEdgeMenuButtonTrackingArea];
 }
@@ -1182,7 +1180,6 @@
         return;
     }
 
-    [self attachEdgeMenuPanelToWindowIfNeeded];
     if ([self edgeMenuShouldBeVisible]) {
         self.edgeMenuButton.hidden = NO;
         [self layoutStreamMenuEntrypointsIfNeeded];

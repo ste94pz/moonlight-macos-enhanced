@@ -168,7 +168,6 @@ typedef NS_ENUM(NSInteger, MLAudioRendererBackend) {
     char _rtspSessionUrl[1024];
 
     ML_CONNECTION_CONTEXT _connectionContext;
-    NSLock *_initLock;
     BOOL _terminationStarted;
     BOOL _terminationCompleted;
     NSMutableArray<dispatch_block_t> *_terminationCompletions;
@@ -2401,21 +2400,20 @@ void ClClipboardDataReceived(const uint8_t *data, uint32_t length)
 
     if (_connectionLayoutCompatible) {
         // Interrupt any action blocking LiStartConnection(). This is
-        // thread-safe and done outside initLock on purpose, since we
+        // thread-safe and done outside gConnectionLifecycleLock on purpose, since we
         // won't be able to acquire it if LiStartConnection is in
         // progress.
         LiInterruptConnectionCtx(&_connectionContext);
 
-    #if defined(LI_MIC_CONTROL_START)
+#if defined(LI_MIC_CONTROL_START)
         // Ensure mic queue is stopped before connection context teardown
         [self stopMicrophoneIfNeeded];
-    #endif
-
+#endif
     }
 
     // We dispatch this async to get out because this can be invoked
     // on a thread inside common and we don't want to deadlock. It also avoids
-    // blocking on the caller's thread waiting to acquire initLock.
+    // blocking on the caller's thread waiting to acquire gConnectionLifecycleLock.
     // IMPORTANT: Capture self strongly in the block to keep the Connection object
     // alive until LiStopConnectionCtx finishes. The context pointer points to
     // an embedded struct inside self, so self must outlive the async block.
@@ -2461,12 +2459,6 @@ void ClClipboardDataReceived(const uint8_t *data, uint32_t length)
         offsetof(ML_CONNECTION_CONTEXT, inputContext), offsetof(ML_CONNECTION_CONTEXT, stage));
 
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(updateVolume) name:@"volumeSettingChanged" object:nil];
-    
-    // Use a lock to ensure that only one thread is initializing
-    // or deinitializing a connection at a time.
-    if (_initLock == nil) {
-        _initLock = [[NSLock alloc] init];
-    }
     
     _hostAddress = config.host;
     _audioVolumeMultiplier = 1.0f;
@@ -2943,15 +2935,30 @@ void ClClipboardDataReceived(const uint8_t *data, uint32_t length)
 
     __block int result = -1;
     void (^operation)(void) = ^{
-        [self ensureControlContextBacklink];
-        LiSetThreadConnectionContext(&self->_connectionContext);
+        NSString *summary = nil;
         os_unfair_lock_lock(&gConnectionLifecycleLock);
-        result = block();
+
+        BOOL connectionStopping = NO;
+        @synchronized (self) {
+            connectionStopping = self->_terminationStarted || self->_terminationCompleted;
+        }
+
+        if (connectionStopping) {
+            summary = [NSString stringWithFormat:@"conn=%p lifecycle=terminating-or-terminated", self];
+        } else {
+            [self ensureControlContextBacklink];
+            LiSetThreadConnectionContext(&self->_connectionContext);
+            result = block();
+            summary = [self clipboardControlDebugSummary];
+            LiSetThreadConnectionContext(NULL);
+        }
+
         os_unfair_lock_unlock(&gConnectionLifecycleLock);
-        Log(LOG_I, @"[clipboard] %@ result=%d summary=%@",
+
+        Log(connectionStopping ? LOG_W : LOG_I, @"[clipboard] %@ result=%d summary=%@",
             name ?: @"operation",
             result,
-            [self clipboardControlDebugSummary]);
+            summary);
     };
 
     if (dispatch_get_specific(gClipboardQueueKey) == gClipboardQueueKey) {
