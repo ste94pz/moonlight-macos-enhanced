@@ -323,7 +323,7 @@ static BOOL IsGeneratedCuratedNoiseSummaryLine(NSString *line) {
     for (NSInteger category = LoggerNoiseCategoryAppKitMenuInconsistency;
          category <= LoggerNoiseCategoryHostIdentityMismatch;
          category++) {
-        NSString *prefix = [NSString stringWithFormat:@"%@ %@：", PRFX_WARN, NoiseCategoryDisplayName((LoggerNoiseCategory)category)];
+        NSString *prefix = [NSString stringWithFormat:@"%@ %@:", PRFX_WARN, NoiseCategoryDisplayName((LoggerNoiseCategory)category)];
         if ([line hasPrefix:prefix]) {
             return YES;
         }

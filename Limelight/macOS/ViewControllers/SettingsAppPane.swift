@@ -1275,11 +1275,11 @@ private struct DebugLogLiveView: View {
         .frame(width: 260)
 
         Picker("", selection: $settingsModel.debugLogMinLevel) {
-          Text("All").tag("all")
-          Text("Debug").tag("debug")
-          Text("Info").tag("info")
-          Text("Warn").tag("warn")
-          Text("Error").tag("error")
+          Text(languageManager.localize("All")).tag("all")
+          Text(languageManager.localize("Debug")).tag("debug")
+          Text(languageManager.localize("Info")).tag("info")
+          Text(languageManager.localize("Warn")).tag("warn")
+          Text(languageManager.localize("Error")).tag("error")
         }
         .frame(width: 140)
 
@@ -1362,10 +1362,10 @@ private struct DebugLogLiveView: View {
             .lineLimit(1)
         }
 
-        DebugLogStatBadge(label: "Debug", value: visibleDebugCount, color: .gray)
-        DebugLogStatBadge(label: "Info", value: visibleInfoCount, color: .blue)
-        DebugLogStatBadge(label: "Warn", value: visibleWarnCount, color: .orange)
-        DebugLogStatBadge(label: "Error", value: visibleErrorCount, color: .red)
+        DebugLogStatBadge(label: languageManager.localize("Debug"), value: visibleDebugCount, color: .gray)
+        DebugLogStatBadge(label: languageManager.localize("Info"), value: visibleInfoCount, color: .blue)
+        DebugLogStatBadge(label: languageManager.localize("Warn"), value: visibleWarnCount, color: .orange)
+        DebugLogStatBadge(label: languageManager.localize("Error"), value: visibleErrorCount, color: .red)
         Spacer()
       }
 
