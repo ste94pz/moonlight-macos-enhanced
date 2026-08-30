@@ -38,6 +38,8 @@ Release-owned, non-feature work consists of:
 
 Feature merges should preserve source-branch behavior exactly. Any integration conflict or release-only application change must be reviewed explicitly and recorded here instead of being hidden in a merge resolution.
 
+The updated DualShock merge had one expected conflict in mouse-capture transitions. Its resolution keeps `refreshControllerInputSendingState` from the background-input branch as the sole policy owner instead of restoring direct `YES`/`NO` assignments from the standalone DualShock branch. `HIDSupport` still owns the controller-gate transition effects (neutral state, gyro reset/resynchronization), while the stream controller decides the gate value from focus, background preference, input readiness and stop/reconnect state.
+
 ## Build helper
 
 Prerequisites are the same as the main project: initialized `moonlight-common-c`, downloaded FFmpeg/Opus/SDL2 XCFrameworks under `xcframeworks/`, Xcode/command-line tools, and SwiftPM access/cache for OpenSSL 3.6.1. `Limelight/Version.xcconfig` must exist before invoking the helper; normal Xcode work or `Limelight/build-number.sh` creates it.
@@ -87,6 +89,7 @@ This separation has two consequences:
 
 - controller motion/touch functionality must be tested under each supported UI language because errors, diagnostics and in-stream controls use the English coverage keys and locale resources;
 - background controller input must remain subordinate to stream readiness and teardown state: losing focus may preserve controller input when enabled, but reconnect or stop must disable it and clear the old input context;
+- direct-HID arrival, ordinary controls, controller mouse emulation, touch, gyro and accelerometer must all consult `shouldSendControllerEvents`; only physical keyboard/mouse paths consult `shouldSendInputEvents`;
 - localization changes to diagnostics must not alter raw tokens or callback/lifecycle behavior used to debug the controller path.
 
 Italian localization deliberately depends on `fix/english-localization-coverage` and integrates `feature/background-controller-input` so it can own the Italian values for that feature's UI keys. Every current source tip must be an ancestor of `release/complete` before distribution.
@@ -110,7 +113,7 @@ Before distributing a complete build:
 2. Run shell syntax checks and build native plus every architecture intended for release. For universal, inspect main/helper with `lipo -archs` even though the helper script already fails missing slices.
 3. Launch the packaged app, switch System/English/Italian/Chinese, and verify settings, menus, connection editor, diagnostics, microphone/AWDL prompts and Italian privacy strings.
 4. Test DualShock 4 GameController and direct-HID paths, USB and Bluetooth where available: ordinary controls, touch/click, gyro/accelerometer, capture disable, device reconnect and stream reconnect.
-5. With both HID and GameController drivers, test background controller input disabled and enabled while focus moves to another Moonlight window and another application. Include controller mouse emulation, live preference changes, hot-plug, reconnect and disconnect; physical keyboard and mouse input must remain focus-gated.
+5. With both HID and GameController drivers, test background controller input disabled and enabled while focus moves to another Moonlight window and another application. Include ordinary controls, controller mouse emulation, DualShock touch/gyro/accelerometer, rumble, live preference changes, hot-plug, reconnect and disconnect; physical keyboard and mouse input must remain focus-gated.
 6. Cross-test: exercise controller diagnostics and failures while Italian is selected, verify the background-input setting text, and confirm localized presentation does not change raw diagnostic/classifier values.
 7. Test host launch/resume, video, direct/enhanced audio, mouse/keyboard, disconnect/reconnect and app termination to catch regressions outside the directly affected areas.
 8. If producing a DMG, mount it, copy the app, launch it under the intended signing/Gatekeeper conditions, and verify the embedded helper architecture/signature.
