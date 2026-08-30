@@ -308,7 +308,7 @@ final class MLLogCategoryClassifier: NSObject {
 
   static func displayName(forFilterKey filterKey: String?) -> String {
     guard let filterKey, !filterKey.isEmpty, filterKey != "all" else {
-      return "All"
+      return LanguageManager.shared.localize("All")
     }
     return descriptor(forCategoryKey: filterKey).displayName
   }
@@ -1081,7 +1081,7 @@ enum DebugLogParser {
         return .init(title: "Resolved host address", detail: "\(captures[0]) → \(captures[1])")
       }
       if let captures = captures(in: message, pattern: #"Discovery summary for\s+([^:]+):\s*(.+)$"#), captures.count >= 2 {
-        return .init(title: "Host probe result", detail: "\(captures[0])：\(captures[1])")
+        return .init(title: "Host probe result", detail: "\(captures[0]): \(captures[1])")
       }
       if let host = firstCapture(in: message, pattern: #"Found service:\s+.+\.\s([^ ]+)\s+-?\d+$"#) {
         return .init(title: "Discovered broadcast service", detail: host)
