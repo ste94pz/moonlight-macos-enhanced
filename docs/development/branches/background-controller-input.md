@@ -22,6 +22,8 @@ The feature depends on `fix/english-localization-coverage` because its settings 
 
 Stop, controller teardown and reconnect preparation always disable controller input and clear its input context regardless of the preference. Changing the preference while streaming posts `MoonlightControllerSettingsDidChange`, so an unfocused stream updates without requiring a focus cycle or reconnect.
 
+Input-stream establishment and connection-start callbacks also pass through `refreshControllerInputSendingState` instead of directly enabling both controller backends. This keeps focus, background preference, reconnect/stop state and input-context readiness under one owner. Controller rumble follows the resolved controller gate rather than the keyboard/mouse focus gate, so an enabled background controller remains a coherent bidirectional device.
+
 ## Persistence and localization
 
 `Settings.backgroundControllerInput` is optional for compatibility with existing property-list profiles and resolves to `false` when absent. It follows the repository's global/per-host inheritance behavior.
@@ -35,6 +37,7 @@ Build the `Moonlight for macOS` scheme and lint the English and Simplified Chine
 - while the stream window is focused;
 - after focus moves to another Moonlight window and to another application;
 - with normal controller input and controller mouse emulation;
+- with rumble while the controller gate is enabled in background;
 - while toggling the option during an active unfocused stream;
 - after reconnect, disconnect and controller hot-plug transitions.
 
