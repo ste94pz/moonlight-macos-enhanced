@@ -1716,7 +1716,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
 
 - (void)rumble:(unsigned short)controllerNumber lowFreqMotor:(unsigned short)lowFreqMotor highFreqMotor:(unsigned short)highFreqMotor {
     if ([SettingsClass rumbleFor:self.app.host.uuid]) {
-        if (self.hidSupport.shouldSendInputEvents) {
+        if (self.hidSupport.shouldSendControllerEvents) {
             if (self.controllerSupport != nil) {
                 [self.controllerSupport rumble:controllerNumber lowFreqMotor:lowFreqMotor highFreqMotor:highFreqMotor];
             } else {
