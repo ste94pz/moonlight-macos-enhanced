@@ -1402,8 +1402,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
                 self.hidSupport.inputContext = inputContext;
                 self.controllerSupport.inputContext = inputContext;
                 self.hidSupport.shouldSendInputEvents = YES;
-                self.hidSupport.shouldSendControllerEvents = YES;
-                self.controllerSupport.shouldSendInputEvents = YES;
+                [self refreshControllerInputSendingState];
                 [self.streamMan.connection notifyInputStreamReadyForMicrophoneControlIfNeeded];
                 [self rearmMouseCaptureIfPossibleWithReason:@"input-stream-established"];
             }
@@ -1480,8 +1479,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
                     self.controllerSupport.inputContext = inputContext;
                     // Ensure input is enabled immediately after stream start
                     self.hidSupport.shouldSendInputEvents = YES;
-                    self.hidSupport.shouldSendControllerEvents = YES;
-                    self.controllerSupport.shouldSendInputEvents = YES;
+                    [self refreshControllerInputSendingState];
 
                     // If input stream isn't initialized yet, retry briefly to bind after start
                     __block int remainingAttempts = 20;
