@@ -201,6 +201,7 @@
 "Dangerous Operation" = "Operazione pericolosa";
 "Dark" = "Buio";
 "Data Detectors" = "Rilevatori di dati";
+"Debug" = "Debug";
 "Debug Log" = "log di debug";
 "Debug Tools" = "Strumenti di debug";
 "Decrease Item Size" = "Diminuisci la dimensione dell'articolo";
@@ -248,6 +249,7 @@
 "Enter the resolution (width x height) and frame rate (FPS).\nA value of 0 lets the host decide and is not recommended." = "Inserisci la risoluzione (larghezza x altezza) e la frequenza fotogrammi (FPS).\nUn valore pari a 0 lascia decidere all'host e non è consigliato.";
 "EQ" = "EQ";
 "EQ Preset" = "EQ preimpostato";
+"Error" = "Errore";
 "Even %dx cadence" = "Cadenza uniforme %dx";
 "Exit Stream" = "Esci dal streaming";
 "Expanded" = "Espanso";
@@ -342,6 +344,7 @@
 "I Understand and Enable" = "Capisco e abilito";
 "I Understand, Continue" = "Ho capito, continuo";
 "Increase Item Size" = "Aumenta la dimensione dell'articolo";
+"Info" = "Info";
 "Input" = "Input";
 "Input Diagnostics" = "Diagnostica degli ingressi";
 "Input Monitoring" = "Monitoraggio degli ingressi";
@@ -831,6 +834,7 @@
 "Wake PC" = "Sveglia il PC";
 "Waking..." = "Riattivazione...";
 "WAN Remote" = "WAN/percorso pubblico";
+"Warn" = "Avviso";
 "Welcome AWDL detail" = "Facoltativo. Aiuta a stabilizzare lo streaming Wi-Fi gestendo l'interfaccia AWDL durante una sessione.";
 "Welcome Permissions Subtitle" = "Configura ora le autorizzazioni e i servizi desiderati. Potrai modificarli in seguito nelle Impostazioni.";
 "Welcome to Moonlight" = "Benvenuto in Moonlight";
