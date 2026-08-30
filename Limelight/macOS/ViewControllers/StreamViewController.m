@@ -502,6 +502,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
     [self tearDownStreamLifecycleObserversAndTimers];
 
     self.hidSupport.shouldSendInputEvents = NO;
+    self.hidSupport.shouldSendControllerEvents = NO;
     self.controllerSupport.shouldSendInputEvents = NO;
     self.hidSupport.inputContext = NULL;
     self.controllerSupport.inputContext = NULL;
@@ -1356,6 +1357,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
                 self.hidSupport.inputContext = inputContext;
                 self.controllerSupport.inputContext = inputContext;
                 self.hidSupport.shouldSendInputEvents = YES;
+                self.hidSupport.shouldSendControllerEvents = YES;
                 self.controllerSupport.shouldSendInputEvents = YES;
                 [self.streamMan.connection notifyInputStreamReadyForMicrophoneControlIfNeeded];
                 [self rearmMouseCaptureIfPossibleWithReason:@"input-stream-established"];
@@ -1433,6 +1435,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
                     self.controllerSupport.inputContext = inputContext;
                     // Ensure input is enabled immediately after stream start
                     self.hidSupport.shouldSendInputEvents = YES;
+                    self.hidSupport.shouldSendControllerEvents = YES;
                     self.controllerSupport.shouldSendInputEvents = YES;
 
                     // If input stream isn't initialized yet, retry briefly to bind after start
@@ -1668,7 +1671,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
 
 - (void)rumble:(unsigned short)controllerNumber lowFreqMotor:(unsigned short)lowFreqMotor highFreqMotor:(unsigned short)highFreqMotor {
     if ([SettingsClass rumbleFor:self.app.host.uuid]) {
-        if (self.hidSupport.shouldSendInputEvents) {
+        if (self.hidSupport.shouldSendControllerEvents) {
             if (self.controllerSupport != nil) {
                 [self.controllerSupport rumble:controllerNumber lowFreqMotor:lowFreqMotor highFreqMotor:highFreqMotor];
             } else {
