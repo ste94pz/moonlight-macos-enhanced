@@ -1394,8 +1394,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
                 self.hidSupport.inputContext = inputContext;
                 self.controllerSupport.inputContext = inputContext;
                 self.hidSupport.shouldSendInputEvents = YES;
-                self.hidSupport.shouldSendControllerEvents = YES;
-                self.controllerSupport.shouldSendInputEvents = YES;
+                [self refreshControllerInputSendingState];
                 [self.streamMan.connection notifyInputStreamReadyForMicrophoneControlIfNeeded];
                 [self rearmMouseCaptureIfPossibleWithReason:@"input-stream-established"];
             }
@@ -1472,8 +1471,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
                     self.controllerSupport.inputContext = inputContext;
                     // Ensure input is enabled immediately after stream start
                     self.hidSupport.shouldSendInputEvents = YES;
-                    self.hidSupport.shouldSendControllerEvents = YES;
-                    self.controllerSupport.shouldSendInputEvents = YES;
+                    [self refreshControllerInputSendingState];
 
                     // If input stream isn't initialized yet, retry briefly to bind after start
                     __block int remainingAttempts = 20;
@@ -1708,7 +1706,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
 
 - (void)rumble:(unsigned short)controllerNumber lowFreqMotor:(unsigned short)lowFreqMotor highFreqMotor:(unsigned short)highFreqMotor {
     if ([SettingsClass rumbleFor:self.app.host.uuid]) {
-        if (self.hidSupport.shouldSendInputEvents) {
+        if (self.hidSupport.shouldSendControllerEvents) {
             if (self.controllerSupport != nil) {
                 [self.controllerSupport rumble:controllerNumber lowFreqMotor:lowFreqMotor highFreqMotor:highFreqMotor];
             } else {
