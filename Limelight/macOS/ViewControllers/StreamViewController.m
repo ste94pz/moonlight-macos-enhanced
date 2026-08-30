@@ -479,7 +479,11 @@ highFreqMotor:(unsigned short)highFreqMotor {
     @synchronized (self) {
         if (self.stopStreamInProgress) {
             if (completion) {
-                dispatch_async(dispatch_get_main_queue(), completion);
+                // StreamManager coalesces stop requests and invokes every
+                // completion only after Connection has finished native teardown.
+                [self.streamMan stopStreamWithCompletion:^{
+                    dispatch_async(dispatch_get_main_queue(), completion);
+                }];
             }
             return;
         }
@@ -490,6 +494,7 @@ highFreqMotor:(unsigned short)highFreqMotor {
     [self stopStreamHealthDiagnostics];
     [self logStreamHealthSummaryWithReason:[NSString stringWithFormat:@"begin-stop:%@", reason ?: @"unknown"]];
     [self finalizeInputDiagnosticsWithReason:reason];
+    [self releaseClipboardSyncOwnershipWithUnbind:YES];
     [[AwdlHelperManager sharedManager] endStreamSessionWithReason:reason ?: @"begin-stop"];
     [self tearDownStreamLifecycleObserversAndTimers];
 
@@ -535,17 +540,21 @@ highFreqMotor:(unsigned short)highFreqMotor {
         }
 
         double stopStart = CACurrentMediaTime();
-        [strongSelf.streamMan stopStream];
-        Log(LOG_I, @"Stream stop took %.3fs (total %.3fs)", CACurrentMediaTime() - stopStart, CACurrentMediaTime() - start);
+        [strongSelf.streamMan stopStreamWithCompletion:^{
+            Log(LOG_I, @"Stream stop took %.3fs (total %.3fs)",
+                CACurrentMediaTime() - stopStart,
+                CACurrentMediaTime() - start);
 
-        // Ensure streaming state is cleared for this host even if we don't receive a termination callback
-        if (self.app.host.uuid) {
-            [[StreamingSessionManager shared] didDisconnectForHost:self.app.host.uuid];
-        }
+            // Keep the controller alive through native teardown and clear the
+            // streaming state even when no termination callback is delivered.
+            if (strongSelf.app.host.uuid) {
+                [[StreamingSessionManager shared] didDisconnectForHost:strongSelf.app.host.uuid];
+            }
 
-        if (completion) {
-            dispatch_async(dispatch_get_main_queue(), completion);
-        }
+            if (completion) {
+                dispatch_async(dispatch_get_main_queue(), completion);
+            }
+        }];
     });
 }
 

@@ -145,7 +145,6 @@ typedef NS_ENUM(NSInteger, MLAudioRendererBackend) {
     char _rtspSessionUrl[1024];
 
     ML_CONNECTION_CONTEXT _connectionContext;
-    NSLock *_initLock;
     BOOL _terminationStarted;
     BOOL _terminationCompleted;
     NSMutableArray<dispatch_block_t> *_terminationCompletions;
@@ -2343,12 +2342,6 @@ void ClClipboardItemReceived(const LI_CLIPBOARD_ITEM *item)
 
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(updateVolume) name:@"volumeSettingChanged" object:nil];
     
-    // Use a lock to ensure that only one thread is initializing
-    // or deinitializing a connection at a time.
-    if (_initLock == nil) {
-        _initLock = [[NSLock alloc] init];
-    }
-    
     _hostAddress = config.host;
     _audioVolumeMultiplier = 1.0f;
     _stateLock = OS_UNFAIR_LOCK_INIT;
@@ -2783,15 +2776,30 @@ void ClClipboardItemReceived(const LI_CLIPBOARD_ITEM *item)
 
     __block int result = -1;
     void (^operation)(void) = ^{
-        [self ensureControlContextBacklink];
-        LiSetThreadConnectionContext(&self->_connectionContext);
+        NSString *summary = nil;
         os_unfair_lock_lock(&gConnectionLifecycleLock);
-        result = block();
+
+        BOOL connectionStopping = NO;
+        @synchronized (self) {
+            connectionStopping = self->_terminationStarted || self->_terminationCompleted;
+        }
+
+        if (connectionStopping) {
+            summary = [NSString stringWithFormat:@"conn=%p lifecycle=terminating-or-terminated", self];
+        } else {
+            [self ensureControlContextBacklink];
+            LiSetThreadConnectionContext(&self->_connectionContext);
+            result = block();
+            summary = [self clipboardControlDebugSummary];
+            LiSetThreadConnectionContext(NULL);
+        }
+
         os_unfair_lock_unlock(&gConnectionLifecycleLock);
-        Log(LOG_I, @"[clipboard] %@ result=%d summary=%@",
+
+        Log(connectionStopping ? LOG_W : LOG_I, @"[clipboard] %@ result=%d summary=%@",
             name ?: @"operation",
             result,
-            [self clipboardControlDebugSummary]);
+            summary);
     };
 
     if (dispatch_get_specific(gClipboardQueueKey) == gClipboardQueueKey) {
