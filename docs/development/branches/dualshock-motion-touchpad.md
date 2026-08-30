@@ -36,7 +36,7 @@ controller input/touch
 
 - `Limelight/Input/Controller.h`: per-GameController arrival, timers, last motion samples, gyro-rest state and two touch positions.
 - `ControllerSupport.h/.m`: capability advertisement, GameController touch/motion conversion, active controller mask, neutral/release behavior, lifecycle cleanup and corrected button transitions.
-- `HIDSupport.h`, `HIDSupport_Internal.h`, `HIDSupport.m`: direct-HID request rates, DS4 calibration/filter state, touch tracking, report validation, arrival and reconnect behavior.
+- `HIDSupport.h`, `HIDSupport_Internal.h`, `HIDSupport.m`: direct-HID request rates, DS4 calibration/filter state, touch tracking, report validation, arrival and reconnect behavior. A controller-specific send gate is distinct from the keyboard/mouse focus gate.
 - `Connection.h/.m`: registers `setMotionEventState` in `CONNECTION_LISTENER_CALLBACKS` and forwards the C callback to Objective-C.
 - `StreamViewController.m` and `_Internal.h`: route the callback to the active input backend while rejecting callbacks from an obsolete stream generation.
 - `moonlight-common/moonlight-common-c`: supplies `LI_CCAP_*`, controller-arrival/touch/motion event APIs and the host-driven callback; the submodule revision is unchanged by this branch.
@@ -94,7 +94,7 @@ Stick axes use a small center normalization/deadzone, while trigger bytes remain
 
 ## Lifecycle and invariants
 
-- `shouldSendInputEvents == NO` gates arrival and state. Transitioning from enabled to disabled sends neutral controller state and a zero gyro when applicable.
+- `shouldSendControllerEvents == NO` gates controller arrival, ordinary state, controller mouse emulation, touch and motion. Transitioning this controller-specific gate from enabled to disabled sends neutral controller state and a zero gyro when applicable. `shouldSendInputEvents` remains the independent keyboard/mouse focus gate.
 - Setting a new input context clears arrival, requested motion rates and filter/touch state. Do not reuse a context-bound arrival flag across stream sessions.
 - A GameController disconnect unregisters callbacks, stops timers/sensors, releases neutral state, removes the controller, updates the active mask and reassigns player indices as existing code requires.
 - A direct-HID physical disconnect clears buttons, sticks, triggers, touch/calibration/filter state and arrival, then attempts a neutral packet. It intentionally preserves Sunshine's requested gyro/accelerometer rates because the host normally requests them once per virtual-controller session; a physical reconnect can therefore resume without a second host request.
@@ -119,5 +119,7 @@ Build both controller configurations and test against a host that requests contr
 4. Hold the controller still: remote gyro must settle once to zero without a continuing reliable-packet stream. Move slowly through the hysteresis boundary and make a fast movement; verify neither drift nor lost intentional motion.
 5. Exercise triggers independently near centered sticks, touch at edges, simultaneous contacts, controller removal while touching/moving, input-capture disable, stream reconnect and multiple controllers on the GameController path.
 6. Feed or capture a short/invalid Bluetooth report if possible and confirm it is ignored without state corruption or crash.
+
+When this branch is integrated with `feature/background-controller-input`, repeat motion and touch tests after moving focus to another display/application. The background feature owns the policy that resolves `shouldSendControllerEvents`; this branch owns ensuring every direct-HID controller path consults that gate rather than the keyboard/mouse gate.
 
 There is no committed unit/UI test target. A future upstream PR would benefit from separating the protocol callback plumbing from DS4-specific parsing and adding deterministic report fixtures for calibration, truncation, filtering and lifecycle resets. Internal branch documentation must not be included in that PR.
