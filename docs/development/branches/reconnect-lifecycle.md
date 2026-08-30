@@ -18,6 +18,8 @@ The history and code show the unsafe ordering, but do not contain a reproducible
 
 Existing generation forwarding in `StreamViewController.m`, window-mode application in `StreamViewController.m`/`+WindowModes.m`, and lifecycle fields in `StreamViewController_Internal.h` are not introduced by this fix, but they are required context for the solution.
 
+The controller-level close path also uses `stopStreamWithCompletion:` now. It keeps the controller alive until native teardown completes and does not treat the asynchronous compatibility `stopStream` call as a completed stop. Repeated close completions are registered with the manager boundary instead of being dispatched immediately.
+
 ## Connection termination
 
 `terminate` remains the compatibility entry point and delegates to `terminateWithCompletion:nil`.
@@ -31,6 +33,8 @@ Existing generation forwarding in `StreamViewController.m`, window-mode applicat
 The first caller marks termination started, optionally stores its completion, then calls thread-safe `LiInterruptConnectionCtx()` outside the lifecycle lock so a blocking `LiStartConnectionCtx()` can be interrupted. Microphone teardown is performed once. Native stop is dispatched to a high-priority global queue because termination can be requested from inside `moonlight-common` and must not deadlock or block that caller.
 
 The async block captures `self` strongly. This is required because `_connectionContext` is embedded inside the Objective-C object; the pointer passed to `LiStopConnectionCtx()` would become invalid if `Connection` were released early. After native stop it unregisters the context-to-object mapping, marks completion under `@synchronized`, drains a snapshot of all registered completion blocks, and only then releases the strong local lifetime.
+
+The obsolete `_initLock` Objective-C ivar was removed. It had never been acquired, and a shutdown crash was symbolicated to `Connection .cxx_destruct` attempting to release that ivar after native context teardown. Removing an unused retainable object immediately adjacent to the embedded native context also removes that invalid destructor operation; lifecycle serialization is provided by the explicit state and process-wide lifecycle lock described here.
 
 If termination is already in progress, a caller only appends its completion and returns. If it has completed, a new completion is dispatched asynchronously on a default global queue. Completion execution therefore has no main-queue guarantee; UI callers must dispatch explicitly.
 
@@ -89,7 +93,11 @@ On timeout it logs the failure, clears `stopStreamInProgress` and `reconnectInPr
 
 ## Presentation-mode preservation
 
-Reconnect records mode `1` for observed fullscreen and `2` for observed borderless. If neither is currently observable, it falls back to the persisted `SettingsClass.displayModeFor(host)` value rather than always recording windowed (`0`). This matters while AppKit is entering or leaving fullscreen, when `styleMask` may temporarily look like a regular window. The code logs `fullscreenTransitionInProgress` and `pendingWindowMode`, but does not use either value directly in mode selection.
+`isWindowFullscreen` compares the fullscreen style bit explicitly with zero. Returning the raw masked value through Objective-C `BOOL` is incorrect on x86_64 because `NSWindowStyleMaskFullScreen` is bit 14 (`0x4000`), which truncates to zero in the 8-bit `BOOL` return value. The historical symptom is therefore possible even when the window style correctly contains the fullscreen bit.
+
+Reconnect records mode `1` for observed fullscreen and `2` for observed borderless. If neither is currently observable, it falls back to the persisted `SettingsClass.displayModeFor(host)` value rather than always recording windowed (`0`). The observation reads the stream controller's own window and does not depend on key/main-window focus. This also matters while AppKit is entering or leaving fullscreen, when `styleMask` may temporarily look like a regular window.
+
+The floating fullscreen/borderless control keeps its existing visibility and interaction rules. Before its auxiliary panel is attached or ordered onscreen, layout applies the final edge-anchored frame; this prevents the control from flashing at the panel's default bottom-left position without coupling menu availability to renderer startup or first-frame delivery.
 
 When the replacement connection starts, `connectionStarted` consumes the preserved value only if the controller is still reconnecting, then clears `reconnectPreserveFullscreenStateValid`. Existing startup-mode code avoids a duplicate fullscreen toggle when fullscreen or a fullscreen transition is already primed, and otherwise applies fullscreen/borderless after the established startup delay.
 
@@ -99,10 +107,14 @@ When the replacement connection starts, `connectionStarted` consumes the preserv
 - A reconnect must not call `prepareForStreaming` until the old `StreamManager` completion proves that its `Connection` passed `LiStopConnectionCtx()` and context unregistration.
 - Multiple `Connection.terminateWithCompletion:` or `StreamManager.stopStreamWithCompletion:` calls must share one teardown and must not lose completions registered at those layers.
 - `Connection` must remain alive while native teardown uses its embedded context; `StreamManager` and the exact stopping connection must likewise remain strongly owned through their completion chain.
+- A controller close completion must not run until its `StreamManager` stop completion has crossed the native teardown boundary; the controller remains strongly owned until then.
 - `LiStartConnectionCtx()`, `LiStopConnectionCtx()` and clipboard control operations must continue to share `gConnectionLifecycleLock`; interruption must remain possible without acquiring that lock.
+- Clipboard control operations must re-check `Connection` termination state while holding `gConnectionLifecycleLock` and must not access or summarize a native control context after termination has started.
+- Intentional stop and reconnect release clipboard ownership, including the native unbind when required, before requesting connection teardown.
 - A reconnect continuation may mutate UI or create a new session only when its captured generation is still active, reconnect is still enabled/in progress, and no user disconnect superseded it.
 - Stream callbacks must continue through generation-scoped proxies so an obsolete connection cannot alter the replacement session.
 - AppKit's transient non-fullscreen style during a transition must not by itself force the replacement session to windowed mode; use observed fullscreen/borderless or the configured fallback as implemented.
+- Fullscreen style-mask tests returning `BOOL` must normalize the masked integer with `!= 0`; the raw `0x4000` value must never be returned as `BOOL`.
 - Controller/HID teardown and `prepareForStreaming` remain on the main queue after native stop completion.
 - A watchdog timeout must not start a new session while the old native context may still be stopping.
 
@@ -111,7 +123,6 @@ When the replacement connection starts, `connectionStarted` consumes the preserv
 - Stop before `_connection` creation completes immediately at the manager layer; cancellation/nil-callback checks are what prevent later connection creation. Future startup edits must preserve those checks.
 - A completion registered after either object has completed is asynchronous on a global queue, while pre-completion blocks run on the thread that finishes teardown. Callers must not assume queue affinity or synchronous delivery.
 - The 15-second watchdog does not terminate a wedged native stop. The user can exit the UI, but the async teardown may remain blocked and retains its `Connection`.
-- `beginStopStreamIfNeededWithReason:completion:` in `StreamViewController` predates this fix and, when `stopStreamInProgress` is already true, dispatches a new completion immediately rather than coalescing it with the underlying stop. The strong completion-preservation guarantee applies to the new `Connection` and `StreamManager` APIs, not every controller-level close request.
 - The presentation fallback uses configured mode whenever neither fullscreen nor borderless is observed, even outside a recorded fullscreen transition; `pendingWindowMode` is diagnostic only.
 - No automated concurrency or reconnect tests are present, and repository history does not establish which failure mode, AppKit transition timing or host/network conditions reproduced the original issue.
 
